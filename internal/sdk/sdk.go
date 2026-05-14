@@ -44,6 +44,13 @@ type ClientConfig struct {
 	ListPendingItemsContext  func(ctx context.Context) (map[string][]PendingItem, error)
 	BranchURL                func(branch string) string // returns a web URL for the branch
 	CloseUpstreamPR          func(prURL string) error   // close an upstream PR by its web URL
+
+	// GitHub cache hook dependencies. DisableGitHubCache skips default loading;
+	// otherwise New loads the host cache best-effort when GitHubCache is nil.
+	DisableGitHubCache bool
+	GitHubCache        githubcache.Cache
+	GitHubResolver     githubcache.Resolver
+	GitHubCommons      pile.RowQuerier
 }
 
 // Client provides mode-aware operations against the Wasteland wanted board.
@@ -125,15 +132,21 @@ func New(cfg ClientConfig) *Client {
 		BranchURL:                cfg.BranchURL,
 		CloseUpstreamPR:          cfg.CloseUpstreamPR,
 	}
-	// Best-effort init for the post-Accept GitHub-handle cache hook. A
-	// failure here leaves ghCache nil so the hook becomes a no-op;
-	// mutations never fail because the handle cache is unavailable.
-	if cache, err := githubcache.Load(); err != nil {
-		slog.Warn("stamp_cache: disabled; could not load github-handles cache", "error", err)
-	} else {
-		c.ghCache = cache
-		c.ghResolver = githubcache.NewResolver()
-		c.ghCommons = pile.NewCommonsReader()
+	if cfg.GitHubCache != nil {
+		c.ghCache = cfg.GitHubCache
+		c.ghResolver = cfg.GitHubResolver
+		c.ghCommons = cfg.GitHubCommons
+	} else if !cfg.DisableGitHubCache {
+		// Best-effort init for the post-Accept GitHub-handle cache hook. A
+		// failure here leaves ghCache nil so the hook becomes a no-op;
+		// mutations never fail because the handle cache is unavailable.
+		if cache, err := githubcache.Load(); err != nil {
+			slog.Warn("stamp_cache: disabled; could not load github-handles cache", "error", err)
+		} else {
+			c.ghCache = cache
+			c.ghResolver = githubcache.NewResolver()
+			c.ghCommons = pile.NewCommonsReader()
+		}
 	}
 	return c
 }
