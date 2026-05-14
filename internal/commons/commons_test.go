@@ -269,7 +269,7 @@ func TestFormatTagsJSON(t *testing.T) {
 
 func TestBuildBrowseQuery_MyItems(t *testing.T) {
 	t.Parallel()
-	f := BrowseFilter{Priority: -1, MyItems: "my-rig"}
+	f := BrowseFilter{Priority: PriorityUnset, MyItems: "my-rig"}
 	q := BuildBrowseQuery(f)
 	if !strings.Contains(q, "(posted_by = 'my-rig' OR claimed_by = 'my-rig')") {
 		t.Errorf("MyItems should produce OR clause, got:\n%s", q)
@@ -282,7 +282,7 @@ func TestBuildBrowseQuery_MyItems(t *testing.T) {
 
 func TestBuildBrowseQuery_MyItems_OverridesPostedClaimedBy(t *testing.T) {
 	t.Parallel()
-	f := BrowseFilter{Priority: -1, MyItems: "my-rig", PostedBy: "other", ClaimedBy: "other"}
+	f := BrowseFilter{Priority: PriorityUnset, MyItems: "my-rig", PostedBy: "other", ClaimedBy: "other"}
 	q := BuildBrowseQuery(f)
 	if !strings.Contains(q, "(posted_by = 'my-rig' OR claimed_by = 'my-rig')") {
 		t.Errorf("MyItems should take priority, got:\n%s", q)
@@ -294,7 +294,7 @@ func TestBuildBrowseQuery_MyItems_OverridesPostedClaimedBy(t *testing.T) {
 
 func TestBuildBrowseQuery_SortPriority(t *testing.T) {
 	t.Parallel()
-	f := BrowseFilter{Priority: -1, Sort: SortPriority}
+	f := BrowseFilter{Priority: PriorityUnset, Sort: SortPriority}
 	q := BuildBrowseQuery(f)
 	if !strings.Contains(q, "ORDER BY priority ASC, created_at DESC") {
 		t.Errorf("SortPriority should order by priority, got:\n%s", q)
@@ -303,7 +303,7 @@ func TestBuildBrowseQuery_SortPriority(t *testing.T) {
 
 func TestBuildBrowseQuery_SortNewest(t *testing.T) {
 	t.Parallel()
-	f := BrowseFilter{Priority: -1, Sort: SortNewest}
+	f := BrowseFilter{Priority: PriorityUnset, Sort: SortNewest}
 	q := BuildBrowseQuery(f)
 	if !strings.Contains(q, "ORDER BY created_at DESC") {
 		t.Errorf("SortNewest should order by created_at DESC, got:\n%s", q)
@@ -315,7 +315,7 @@ func TestBuildBrowseQuery_SortNewest(t *testing.T) {
 
 func TestBuildBrowseQuery_SortAlpha(t *testing.T) {
 	t.Parallel()
-	f := BrowseFilter{Priority: -1, Sort: SortAlpha}
+	f := BrowseFilter{Priority: PriorityUnset, Sort: SortAlpha}
 	q := BuildBrowseQuery(f)
 	if !strings.Contains(q, "ORDER BY title ASC") {
 		t.Errorf("SortAlpha should order by title ASC, got:\n%s", q)
@@ -333,7 +333,7 @@ func TestBuildBrowseQuery_PriorityFilter(t *testing.T) {
 
 func TestBuildBrowseQuery_Long(t *testing.T) {
 	t.Parallel()
-	f := BrowseFilter{Priority: -1, Long: true}
+	f := BrowseFilter{Priority: PriorityUnset, Long: true}
 	q := BuildBrowseQuery(f)
 	if !strings.Contains(q, "description") {
 		t.Errorf("Long=true should include description column, got:\n%s", q)
@@ -342,7 +342,7 @@ func TestBuildBrowseQuery_Long(t *testing.T) {
 
 func TestBuildBrowseQuery_NotLong(t *testing.T) {
 	t.Parallel()
-	f := BrowseFilter{Priority: -1, Long: false}
+	f := BrowseFilter{Priority: PriorityUnset, Long: false}
 	q := BuildBrowseQuery(f)
 	if strings.Contains(q, "description") {
 		t.Errorf("Long=false should not include description column, got:\n%s", q)

@@ -120,7 +120,7 @@ func TestBrowseContext_BindsDBContextAndUsesContextPendingCallback(t *testing.T)
 	})
 
 	ctx := context.WithValue(context.Background(), key, "trace-bound")
-	if _, err := c.BrowseContext(ctx, commons.BrowseFilter{View: "all", Priority: -1}); err != nil {
+	if _, err := c.BrowseContext(ctx, commons.BrowseFilter{View: "all", Priority: commons.PriorityUnset}); err != nil {
 		t.Fatalf("BrowseContext() error = %v", err)
 	}
 	if got := seenDB.Value(key); got != "trace-bound" {
@@ -144,7 +144,7 @@ func TestBrowseContext_PropagatesPendingListCancellationByDefault(t *testing.T) 
 		},
 	})
 
-	_, err := c.BrowseContext(context.Background(), commons.BrowseFilter{View: "all", Priority: -1})
+	_, err := c.BrowseContext(context.Background(), commons.BrowseFilter{View: "all", Priority: commons.PriorityUnset})
 	if !errors.Is(err, context.DeadlineExceeded) {
 		t.Fatalf("BrowseContext() error = %v, want context.DeadlineExceeded", err)
 	}
@@ -164,7 +164,7 @@ func TestBrowseContext_BestEffortPendingReadsDegradesPendingListCancellation(t *
 		},
 	})
 
-	result, err := c.BrowseContext(context.Background(), commons.BrowseFilter{View: "all", Priority: -1})
+	result, err := c.BrowseContext(context.Background(), commons.BrowseFilter{View: "all", Priority: commons.PriorityUnset})
 	if err != nil {
 		t.Fatalf("BrowseContext() error = %v", err)
 	}
@@ -187,7 +187,7 @@ func TestBrowseContext_StrictPendingReadsOverrideDisablesBestEffort(t *testing.T
 		},
 	})
 
-	_, err := c.BrowseContext(WithStrictPendingReads(context.Background()), commons.BrowseFilter{View: "all", Priority: -1})
+	_, err := c.BrowseContext(WithStrictPendingReads(context.Background()), commons.BrowseFilter{View: "all", Priority: commons.PriorityUnset})
 	if !errors.Is(err, context.DeadlineExceeded) {
 		t.Fatalf("BrowseContext() error = %v, want context.DeadlineExceeded", err)
 	}
@@ -216,7 +216,7 @@ func TestBrowseContext_PropagatesPendingItemCancellationByDefault(t *testing.T) 
 		},
 	})
 
-	_, err := c.BrowseContext(context.Background(), commons.BrowseFilter{View: "all", Priority: -1})
+	_, err := c.BrowseContext(context.Background(), commons.BrowseFilter{View: "all", Priority: commons.PriorityUnset})
 	if !errors.Is(err, context.Canceled) {
 		t.Fatalf("BrowseContext() error = %v, want context.Canceled", err)
 	}
@@ -246,7 +246,7 @@ func TestBrowseContext_BestEffortPendingReadsDegradesPendingItemCancellation(t *
 		},
 	})
 
-	result, err := c.BrowseContext(context.Background(), commons.BrowseFilter{View: "all", Priority: -1})
+	result, err := c.BrowseContext(context.Background(), commons.BrowseFilter{View: "all", Priority: commons.PriorityUnset})
 	if err != nil {
 		t.Fatalf("BrowseContext() error = %v", err)
 	}
@@ -703,7 +703,7 @@ func TestBrowse_BranchOnlyPendingUsesItemLoader(t *testing.T) {
 		}),
 	})
 
-	result, err := c.Browse(commons.BrowseFilter{View: "mine", Priority: -1})
+	result, err := c.Browse(commons.BrowseFilter{View: "mine", Priority: commons.PriorityUnset})
 	if err != nil {
 		t.Fatalf("Browse() error = %v", err)
 	}
