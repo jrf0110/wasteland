@@ -1,3 +1,5 @@
+//go:build !js
+
 package commons
 
 import (
@@ -48,14 +50,10 @@ func doltRetryContext(ctx context.Context, fn func(context.Context) error) error
 }
 
 // DoltHubToken returns the DoltHub API token from the environment.
-func DoltHubToken() string {
-	return os.Getenv("DOLTHUB_TOKEN")
-}
+func DoltHubToken() string { return os.Getenv("DOLTHUB_TOKEN") }
 
 // DoltHubOrg returns the default DoltHub organization from the environment.
-func DoltHubOrg() string {
-	return os.Getenv("DOLTHUB_ORG")
-}
+func DoltHubOrg() string { return os.Getenv("DOLTHUB_ORG") }
 
 // PushWithSync pushes the local main branch to both upstream and origin remotes.
 // If a push is rejected (stale), it pulls to merge and retries.
@@ -113,9 +111,7 @@ func pullRemote(dbDir, remote string) error {
 }
 
 // PullUpstream pulls the latest changes from the upstream remote.
-func PullUpstream(dbDir string) error {
-	return pullRemote(dbDir, "upstream")
-}
+func PullUpstream(dbDir string) error { return pullRemote(dbDir, "upstream") }
 
 // ResetMainToUpstream fetches upstream and hard-resets local main to match.
 // Used in PR mode where main should always mirror upstream exactly.
@@ -168,11 +164,6 @@ func DoltSQLScript(dbDir, script string) error {
 	})
 }
 
-// BranchName returns the conventional branch name for a PR-mode mutation.
-func BranchName(rigHandle, wantedID string) string {
-	return fmt.Sprintf("wl/%s/%s", rigHandle, wantedID)
-}
-
 // BranchExists checks whether a branch exists in the dolt database.
 func BranchExists(dbDir, branch string) (bool, error) {
 	out, err := DoltSQLQuery(dbDir, fmt.Sprintf(
@@ -182,7 +173,6 @@ func BranchExists(dbDir, branch string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	// CSV output: "cnt\n0\n" or "cnt\n1\n"
 	lines := strings.Split(strings.TrimSpace(out), "\n")
 	if len(lines) < 2 {
 		return false, fmt.Errorf("unexpected dolt_branches output: %s", out)
@@ -191,28 +181,19 @@ func BranchExists(dbDir, branch string) (bool, error) {
 }
 
 // CheckoutBranch creates the branch if it doesn't exist, then checks it out.
-// Uses dolt CLI commands (not SQL DOLT_CHECKOUT) because the SQL stored
-// procedure is session-scoped and does not persist across dolt sql invocations.
-// When creating a new branch, prefers origin's remote tracking branch as the
-// start point so the local branch starts with the remote's data.
 func CheckoutBranch(dbDir, branch string) error {
 	exists, err := BranchExists(dbDir, branch)
 	if err != nil {
 		return fmt.Errorf("checking branch %s: %w", branch, err)
 	}
 	if !exists {
-		// Prefer creating from origin's tracking branch if it exists,
-		// so the local branch starts with the remote's data (e.g., wanted items
-		// submitted via PRs). Falls back to creating from HEAD (main).
 		remoteBranch := "remotes/origin/" + branch
 		if remoteExists, _ := RemoteBranchExists(dbDir, remoteBranch); remoteExists {
 			if err := doltExec(dbDir, "branch", branch, remoteBranch); err != nil {
 				return fmt.Errorf("creating branch %s from %s: %w", branch, remoteBranch, err)
 			}
-		} else {
-			if err := doltExec(dbDir, "branch", branch); err != nil {
-				return fmt.Errorf("creating branch %s: %w", branch, err)
-			}
+		} else if err := doltExec(dbDir, "branch", branch); err != nil {
+			return fmt.Errorf("creating branch %s: %w", branch, err)
 		}
 	}
 	return doltExec(dbDir, "checkout", branch)
@@ -235,9 +216,7 @@ func RemoteBranchExists(dbDir, remoteBranch string) (bool, error) {
 }
 
 // MergeRemoteTracking merges the origin remote tracking branch into the
-// currently checked-out local branch. If the remote tracking branch doesn't
-// exist or the merge fails, this is a best-effort no-op. Used in PR mode to
-// bring stale local branches up to date with origin's data.
+// currently checked-out local branch.
 func MergeRemoteTracking(dbDir, branch string) error {
 	remoteBranch := "remotes/origin/" + branch
 	exists, err := RemoteBranchExists(dbDir, remoteBranch)
@@ -248,9 +227,7 @@ func MergeRemoteTracking(dbDir, branch string) error {
 }
 
 // CheckoutBranchFrom checks out a branch if it exists, or creates it from
-// startPoint if it doesn't. Used in PR mode so new branches start from a
-// clean upstream-aligned main, while existing branches (with pending
-// multi-step mutations like claim→done→accept) are preserved.
+// startPoint if it doesn't.
 func CheckoutBranchFrom(dbDir, branch, startPoint string) error {
 	exists, err := BranchExists(dbDir, branch)
 	if err != nil {
@@ -265,9 +242,7 @@ func CheckoutBranchFrom(dbDir, branch, startPoint string) error {
 }
 
 // CheckoutMain switches the working directory back to the main branch.
-func CheckoutMain(dbDir string) error {
-	return doltExec(dbDir, "checkout", "main")
-}
+func CheckoutMain(dbDir string) error { return doltExec(dbDir, "checkout", "main") }
 
 // doltExec runs a dolt CLI command in the given database directory.
 func doltExec(dbDir string, args ...string) error {
@@ -285,8 +260,6 @@ func doltExec(dbDir string, args ...string) error {
 }
 
 // PushBranch force-pushes a named branch to origin.
-// Force is always used because wl/* branches on the user's own fork may
-// have diverged history after redo operations (unclaim then re-claim, etc.).
 func PushBranch(dbDir, branch string, stdout io.Writer) error {
 	err := doltRetry(func() error {
 		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
@@ -312,8 +285,7 @@ func ListBranches(dbDir, prefix string) ([]string, error) {
 	return ListBranchesContext(context.Background(), dbDir, prefix)
 }
 
-// ListBranchesContext returns branch names matching a prefix, binding the
-// underlying dolt query to ctx.
+// ListBranchesContext returns branch names matching a prefix, binding the underlying dolt query to ctx.
 func ListBranchesContext(ctx context.Context, dbDir, prefix string) ([]string, error) {
 	out, err := DoltSQLQueryContext(ctx, dbDir, fmt.Sprintf(
 		"SELECT name FROM dolt_branches WHERE name LIKE '%s%%' ORDER BY name",
@@ -324,7 +296,7 @@ func ListBranchesContext(ctx context.Context, dbDir, prefix string) ([]string, e
 	}
 	lines := strings.Split(strings.TrimSpace(out), "\n")
 	if len(lines) < 2 {
-		return nil, nil // header only, no branches
+		return nil, nil
 	}
 	var branches []string
 	for _, line := range lines[1:] {
@@ -336,19 +308,15 @@ func ListBranchesContext(ctx context.Context, dbDir, prefix string) ([]string, e
 	return branches, nil
 }
 
-// TrackOriginBranches creates local tracking branches for any
-// remotes/origin/{prefix}* branches that don't already exist locally.
-// This makes origin branch data available to AS OF queries.
+// TrackOriginBranches creates local tracking branches for any remotes/origin/{prefix}* branches that don't already exist locally.
 func TrackOriginBranches(dbDir, prefix string) error {
 	remotePrefix := "remotes/origin/" + prefix
-
-	// Get remote branches.
 	out, err := DoltSQLQuery(dbDir, fmt.Sprintf(
 		"SELECT name FROM dolt_remote_branches WHERE name LIKE '%s%%' ORDER BY name",
 		EscapeLIKE(remotePrefix),
 	))
 	if err != nil {
-		return nil // best-effort; remote may not exist
+		return nil
 	}
 	var remoteBranches []string
 	for _, line := range strings.Split(strings.TrimSpace(out), "\n")[1:] {
@@ -360,27 +328,20 @@ func TrackOriginBranches(dbDir, prefix string) error {
 	if len(remoteBranches) == 0 {
 		return nil
 	}
-
-	// Get local branches to avoid duplicates.
 	localBranches, _ := ListBranches(dbDir, prefix)
 	localSet := make(map[string]bool, len(localBranches))
 	for _, b := range localBranches {
 		localSet[b] = true
 	}
-
-	// Create local tracking branches for any missing ones.
 	for _, remote := range remoteBranches {
 		local := strings.TrimPrefix(remote, "remotes/origin/")
 		if localSet[local] {
 			continue
 		}
-		// dolt branch <local> <remote-ref>
 		cmd := exec.Command("dolt", "branch", local, remote)
 		cmd.Dir = dbDir
-		_ = cmd.Run() // best-effort
+		_ = cmd.Run()
 	}
-
-	// Also prune local branches whose remote counterpart no longer exists.
 	remoteSet := make(map[string]bool, len(remoteBranches))
 	for _, r := range remoteBranches {
 		remoteSet[strings.TrimPrefix(r, "remotes/origin/")] = true
@@ -390,15 +351,13 @@ func TrackOriginBranches(dbDir, prefix string) error {
 			continue
 		}
 		if !remoteSet[local] {
-			_ = DeleteBranch(dbDir, local) // best-effort
+			_ = DeleteBranch(dbDir, local)
 		}
 	}
-
 	return nil
 }
 
-// MergeBranch merges a branch into main. If the merge produces conflicts
-// it aborts and returns an error. The caller must already be on main.
+// MergeBranch merges a branch into main. If the merge produces conflicts it aborts and returns an error.
 func MergeBranch(dbDir, branch string) error {
 	escaped := strings.ReplaceAll(branch, "'", "''")
 	err := DoltSQLScript(dbDir, fmt.Sprintf(
@@ -435,13 +394,10 @@ func DeleteRemoteBranch(dbDir, remote, branch string) error {
 	})
 }
 
-// EnsureGitHubRemote adds a "github" Dolt remote pointing to the rig's
-// GitHub fork (e.g. https://github.com/alice-dev/wl-commons.git).
-// Idempotent: if "github" remote already exists, no-op.
+// EnsureGitHubRemote adds a "github" Dolt remote pointing to the rig's GitHub fork.
 func EnsureGitHubRemote(dbDir, forkOrg, forkDB string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
-
 	checkCmd := exec.CommandContext(ctx, "dolt", "remote", "-v")
 	checkCmd.Dir = dbDir
 	output, err := checkCmd.CombinedOutput()
@@ -452,7 +408,6 @@ func EnsureGitHubRemote(dbDir, forkOrg, forkDB string) error {
 			}
 		}
 	}
-
 	remoteURL := fmt.Sprintf("https://github.com/%s/%s.git", forkOrg, forkDB)
 	addCmd := exec.CommandContext(ctx, "dolt", "remote", "add", "github", remoteURL)
 	addCmd.Dir = dbDir
@@ -497,93 +452,12 @@ func PushBranchToRemoteForce(dbDir, remote, branch string, force bool, stdout io
 	return nil
 }
 
-// ListWantedIDs returns wanted item IDs, optionally filtered by status.
-func ListWantedIDs(db DB, statusFilter string) ([]string, error) {
-	query := "SELECT id FROM wanted"
-	if statusFilter != "" {
-		query += fmt.Sprintf(" WHERE status = '%s'", EscapeSQL(statusFilter))
-	}
-	query += " ORDER BY created_at DESC LIMIT 50"
-	out, err := db.Query(query, "")
-	if err != nil {
-		return nil, err
-	}
-	lines := strings.Split(strings.TrimSpace(out), "\n")
-	if len(lines) < 2 {
-		return nil, nil
-	}
-	var ids []string
-	for _, line := range lines[1:] {
-		id := strings.TrimSpace(line)
-		if id != "" {
-			ids = append(ids, id)
-		}
-	}
-	return ids, nil
-}
-
-// ResolveWantedID resolves a wanted ID or unambiguous prefix to a full ID.
-func ResolveWantedID(db DB, idOrPrefix string) (string, error) {
-	query := fmt.Sprintf("SELECT id FROM wanted WHERE id LIKE '%s%%' LIMIT 3", EscapeLIKE(idOrPrefix))
-	out, err := db.Query(query, "")
-	if err != nil {
-		return "", err
-	}
-	lines := strings.Split(strings.TrimSpace(out), "\n")
-	if len(lines) < 2 {
-		return "", fmt.Errorf("no wanted item matching %q", idOrPrefix)
-	}
-	var matches []string
-	for _, line := range lines[1:] {
-		id := strings.TrimSpace(line)
-		if id != "" {
-			matches = append(matches, id)
-		}
-	}
-	if len(matches) == 0 {
-		return "", fmt.Errorf("no wanted item matching %q", idOrPrefix)
-	}
-	if len(matches) > 1 {
-		return "", fmt.Errorf("ambiguous prefix %q matches: %s", idOrPrefix, strings.Join(matches, ", "))
-	}
-	return matches[0], nil
-}
-
-// QueryItemStatus returns the status of a wanted item at a specific ref.
-// If ref is empty, queries the working copy.
-// Returns (status, true, nil) if found, ("", false, nil) if not found,
-// or ("", false, err) if the query failed.
-func QueryItemStatus(db DB, wantedID, ref string) (string, bool, error) {
-	query := fmt.Sprintf(
-		"SELECT status FROM wanted WHERE id = '%s'",
-		EscapeSQL(wantedID),
-	)
-	out, err := db.Query(query, ref)
-	if err != nil {
-		return "", false, err
-	}
-	lines := strings.Split(strings.TrimSpace(out), "\n")
-	if len(lines) < 2 {
-		return "", false, nil
-	}
-	return strings.TrimSpace(lines[1]), true, nil
-}
-
-// QueryItemStatusAsOf is a convenience wrapper that returns "" on not-found or error.
-//
-// Deprecated: prefer QueryItemStatus for explicit error handling.
-func QueryItemStatusAsOf(db DB, wantedID, ref string) string {
-	status, _, _ := QueryItemStatus(db, wantedID, ref)
-	return status
-}
-
 // DoltSQLQuery executes a SQL query and returns the raw CSV output.
 func DoltSQLQuery(dbDir, query string) (string, error) {
 	return DoltSQLQueryContext(context.Background(), dbDir, query)
 }
 
-// DoltSQLQueryContext executes a SQL query and returns the raw CSV output,
-// binding the dolt subprocess lifetime to ctx.
+// DoltSQLQueryContext executes a SQL query and returns the raw CSV output, binding the dolt subprocess lifetime to ctx.
 func DoltSQLQueryContext(ctx context.Context, dbDir, query string) (string, error) {
 	var result string
 	err := doltRetryContext(ctx, func(ctx context.Context) error {
