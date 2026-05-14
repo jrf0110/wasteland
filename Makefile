@@ -10,6 +10,8 @@ GOLANGCI_LINT := $(BIN_DIR)/golangci-lint
 BINARY     := wl
 BUILD_DIR  := bin
 INSTALL_DIR := $(HOME)/.local/bin
+WASM_OUT := bin/libwl.wasm
+WASM_DEPS := bin/libwl.deps.txt
 
 # Version metadata injected via ldflags.
 VERSION    := $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
@@ -25,7 +27,7 @@ LDFLAGS := -X main.version=$(VERSION) \
            -X main.date=$(BUILD_TIME) \
            -X main.inferEnabled=$(INFER_ENABLED)
 
-.PHONY: build build-go web check check-all lint fmt-check fmt vet test test-integration test-integration-offline test-cover cover install install-tools setup clean web-check web-test audit audit-web railway-sync-vars test-scripts
+.PHONY: build build-go web check check-all lint fmt-check fmt vet test test-integration test-integration-offline test-cover cover install install-tools setup clean web-check web-test audit audit-web railway-sync-vars test-scripts wasm-build
 
 ## web: build web UI (requires bun)
 web:
@@ -131,6 +133,18 @@ railway-sync-vars:
 ## test-scripts: run repository script unit tests
 test-scripts:
 	python3 -m unittest discover -s scripts -p 'test_*.py'
+
+## wasm-build: build the libwl WASM bundle and report size + dependency list
+wasm-build:
+	@mkdir -p bin
+	GOOS=js GOARCH=wasm go build \
+		-trimpath -ldflags "-s -w" \
+		-o $(WASM_OUT) ./wlwasm
+	@printf "\nRaw size:    "; wc -c < $(WASM_OUT)
+	@printf "Gzipped (-9): "; gzip -9c $(WASM_OUT) | wc -c
+	@printf "Brotli (-q11): "; (command -v brotli >/dev/null && brotli -q 11 -c $(WASM_OUT) | wc -c) || echo "(brotli not installed; skipped)"
+	GOOS=js GOARCH=wasm go list -deps ./wlwasm/... > $(WASM_DEPS)
+	@printf "Dependency list written to %s (%d packages)\n" $(WASM_DEPS) "$$(wc -l < $(WASM_DEPS) | tr -d ' ')"
 
 ## help: show this help
 help:
