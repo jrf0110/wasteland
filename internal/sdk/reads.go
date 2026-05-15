@@ -13,15 +13,15 @@ import (
 
 // PendingItem represents state from a pending upstream PR's fork branch.
 type PendingItem struct {
-	RigHandle   string
-	Status      string
-	ClaimedBy   string
-	Branch      string // e.g. "wl/alice/w-001"
-	BranchURL   string // web URL for the fork branch
-	PRURL       string // web URL for the upstream PR
-	ForkOwner   string // owner of the fork that hosts Branch
-	CompletedBy string // from fork branch completions table
-	Evidence    string // from fork branch completions table
+	RigHandle   string `json:"rig_handle"`
+	Status      string `json:"status"`
+	ClaimedBy   string `json:"claimed_by"`
+	Branch      string `json:"branch"`               // e.g. "wl/alice/w-001"
+	BranchURL   string `json:"branch_url,omitempty"` // web URL for the fork branch
+	PRURL       string `json:"pr_url,omitempty"`     // web URL for the upstream PR
+	ForkOwner   string `json:"fork_owner,omitempty"` // owner of the fork that hosts Branch
+	CompletedBy string `json:"completed_by,omitempty"`
+	Evidence    string `json:"evidence,omitempty"`
 }
 
 // stateRank defines lifecycle ordering for furthest-future state overlay.
@@ -53,29 +53,29 @@ func bindDBContext(ctx context.Context, db commons.DB) commons.DB {
 
 // BrowseResult holds the items returned by Browse along with branch metadata.
 type BrowseResult struct {
-	Items           []commons.WantedSummary
-	PendingIDs      map[string]int           // wanted IDs with pending changes; value is the count of PRs/branches
-	UpstreamPending map[string][]PendingItem // for detail view consumption
+	Items           []commons.WantedSummary  `json:"items"`
+	PendingIDs      map[string]int           `json:"pending_ids,omitempty"`      // wanted IDs with pending changes; value is the count of PRs/branches
+	UpstreamPending map[string][]PendingItem `json:"upstream_pending,omitempty"` // for detail view consumption
 }
 
 // DetailResult holds the full picture of a wanted item for display.
 type DetailResult struct {
-	Item       *commons.WantedItem
-	Completion *commons.CompletionRecord
-	Stamp      *commons.Stamp
-	Branch     string // mutation branch name ("" if none)
-	BranchURL  string // web URL for the branch ("" if none)
-	MainStatus string // status on main ("" if no branch)
-	PRURL      string // existing PR URL ("" if none)
-	Delta      string // human-readable delta label ("" if none)
-	Actions    []commons.Transition
+	Item       *commons.WantedItem       `json:"item,omitempty"`
+	Completion *commons.CompletionRecord `json:"completion,omitempty"`
+	Stamp      *commons.Stamp            `json:"stamp,omitempty"`
+	Branch     string                    `json:"branch,omitempty"`      // mutation branch name ("" if none)
+	BranchURL  string                    `json:"branch_url,omitempty"`  // web URL for the branch ("" if none)
+	MainStatus string                    `json:"main_status,omitempty"` // status on main ("" if no branch)
+	PRURL      string                    `json:"pr_url,omitempty"`      // existing PR URL ("" if none)
+	Delta      string                    `json:"delta,omitempty"`       // human-readable delta label ("" if none)
+	Actions    []commons.Transition      `json:"actions,omitempty"`
 	// BranchActions are mode-aware branch operations: "submit_pr", "apply", "discard".
 	// Computed by the SDK based on mode, branch state, delta, and existing PR.
-	BranchActions []string
-	UpstreamPRs   []PendingItem // pending upstream PRs for this item
+	BranchActions []string      `json:"branch_actions,omitempty"`
+	UpstreamPRs   []PendingItem `json:"upstream_prs,omitempty"` // pending upstream PRs for this item
 	// PendingReadIncomplete reports that the primary item was loaded, but the
 	// pending metadata fetch failed and the result was degraded.
-	PendingReadIncomplete bool
+	PendingReadIncomplete bool `json:"pending_read_incomplete,omitempty"`
 }
 
 // Browse queries the wanted board with filters, applying branch overlays in PR mode.

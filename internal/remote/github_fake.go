@@ -1,3 +1,5 @@
+//go:build !js
+
 package remote
 
 // FakeGitHubProvider embeds GitProvider and overrides Type() to return "github".

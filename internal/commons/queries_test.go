@@ -468,7 +468,7 @@ func TestBrowseWantedBranchAware_DefaultViewTreatsEmptyAsMine(t *testing.T) {
 		},
 	}
 
-	items, pending, err := BrowseWantedBranchAware(db, "pr", "alice", BrowseFilter{Priority: -1})
+	items, pending, err := BrowseWantedBranchAware(db, "pr", "alice", BrowseFilter{Priority: PriorityUnset})
 	if err != nil {
 		t.Fatalf("BrowseWantedBranchAware() error = %v", err)
 	}

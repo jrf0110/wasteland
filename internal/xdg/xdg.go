@@ -1,3 +1,5 @@
+//go:build !js
+
 // Package xdg provides XDG Base Directory support for wasteland.
 package xdg
 

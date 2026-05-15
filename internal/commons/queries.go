@@ -1,6 +1,7 @@
 package commons
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 )
@@ -34,20 +35,65 @@ func SortLabel(s SortOrder) string {
 	}
 }
 
+// PriorityUnset is the sentinel value for BrowseFilter.Priority that
+// disables the priority filter. Use this in code that constructs a
+// BrowseFilter without filtering by priority — leaving Priority as the
+// Go zero value (0) would silently restrict results to priority=0
+// items only.
+//
+// JSON callers should omit the `priority` field entirely; the custom
+// UnmarshalJSON below treats absence as PriorityUnset for the same
+// reason.
+const PriorityUnset = -1
+
 // BrowseFilter holds filter parameters for querying the wanted board.
+//
+// When constructing in Go, prefer NewBrowseFilter or set Priority to
+// PriorityUnset explicitly. The zero value of Priority (0) is a real
+// priority level (low), not "unset" — use the sentinel.
 type BrowseFilter struct {
-	Status    string
-	Project   string
-	Type      string
-	Priority  int // -1 means unset
-	Limit     int
-	PostedBy  string
-	ClaimedBy string
-	Search    string
-	MyItems   string    // rig handle for OR filter (posted_by OR claimed_by); empty = disabled
-	Sort      SortOrder // result ordering
-	View      string    // "all" (default), "mine", or "upstream"
-	Long      bool      // include description and other detail fields
+	Status  string `json:"status,omitempty"`
+	Project string `json:"project,omitempty"`
+	Type    string `json:"type,omitempty"`
+	// Priority filters to a specific priority level. Use PriorityUnset
+	// (-1) to disable the filter; 0-3 select a priority level.
+	Priority  int       `json:"priority,omitempty"`
+	Limit     int       `json:"limit,omitempty"`
+	PostedBy  string    `json:"posted_by,omitempty"`
+	ClaimedBy string    `json:"claimed_by,omitempty"`
+	Search    string    `json:"search,omitempty"`
+	MyItems   string    `json:"my_items,omitempty"` // rig handle for OR filter (posted_by OR claimed_by); empty = disabled
+	Sort      SortOrder `json:"sort,omitempty"`     // result ordering
+	View      string    `json:"view,omitempty"`     // "all" (default), "mine", or "upstream"
+	Long      bool      `json:"long,omitempty"`     // include description and other detail fields
+}
+
+// NewBrowseFilter returns a BrowseFilter with Priority correctly set to
+// PriorityUnset. Prefer this over a zero-value BrowseFilter literal
+// when no priority filter is desired.
+func NewBrowseFilter() BrowseFilter {
+	return BrowseFilter{Priority: PriorityUnset}
+}
+
+// UnmarshalJSON treats an absent or null `priority` field as
+// PriorityUnset rather than the Go zero value (0). This avoids the
+// silent footgun where a JSON caller forgets to set priority and
+// suddenly only sees priority=0 items.
+func (f *BrowseFilter) UnmarshalJSON(data []byte) error {
+	type alias BrowseFilter
+	tmp := struct {
+		Priority *int `json:"priority"`
+		*alias
+	}{alias: (*alias)(f)}
+	if err := json.Unmarshal(data, &tmp); err != nil {
+		return err
+	}
+	if tmp.Priority == nil {
+		f.Priority = PriorityUnset
+	} else {
+		f.Priority = *tmp.Priority
+	}
+	return nil
 }
 
 // WantedSummary holds the columns returned by BrowseWanted.
@@ -87,7 +133,7 @@ func BuildBrowseQuery(f BrowseFilter) string {
 	if f.Type != "" {
 		conditions = append(conditions, fmt.Sprintf("type = '%s'", EscapeSQL(f.Type)))
 	}
-	if f.Priority >= 0 {
+	if f.Priority != PriorityUnset {
 		conditions = append(conditions, fmt.Sprintf("priority = %d", f.Priority))
 	}
 	if f.MyItems != "" {
@@ -312,7 +358,7 @@ func matchesBrowseFilter(item *WantedItem, f BrowseFilter) bool {
 	if f.Project != "" && item.Project != f.Project {
 		return false
 	}
-	if f.Priority >= 0 && item.Priority != f.Priority {
+	if f.Priority != PriorityUnset && item.Priority != f.Priority {
 		return false
 	}
 	if f.PostedBy != "" && item.PostedBy != f.PostedBy {

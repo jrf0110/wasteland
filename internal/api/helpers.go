@@ -58,7 +58,7 @@ func parseQueryFilter(r *http.Request) commons.BrowseFilter {
 		Status:   q.Get("status"),
 		Project:  q.Get("project"),
 		Type:     q.Get("type"),
-		Priority: parseIntParam(r, "priority", -1),
+		Priority: parseIntParam(r, "priority", commons.PriorityUnset),
 		Limit:    parseIntParam(r, "limit", 50),
 		Search:   q.Get("search"),
 		Sort:     sort,

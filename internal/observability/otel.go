@@ -1,3 +1,5 @@
+//go:build !js
+
 // Package observability configures tracing, metrics, and trace correlation helpers.
 package observability
 

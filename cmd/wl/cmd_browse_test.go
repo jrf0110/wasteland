@@ -136,7 +136,7 @@ func TestBuildBrowseQuery_DefaultFilters(t *testing.T) {
 	t.Parallel()
 	f := commons.BrowseFilter{
 		Status:   "open",
-		Priority: -1,
+		Priority: commons.PriorityUnset,
 		Limit:    50,
 	}
 	got := commons.BuildBrowseQuery(f)
@@ -161,7 +161,7 @@ func TestBuildBrowseQuery_Long(t *testing.T) {
 	t.Parallel()
 	f := commons.BrowseFilter{
 		Status:   "open",
-		Priority: -1,
+		Priority: commons.PriorityUnset,
 		Limit:    50,
 		Long:     true,
 	}
@@ -207,7 +207,7 @@ func TestBuildBrowseQuery_AllFilters(t *testing.T) {
 func TestBuildBrowseQuery_NoFilters(t *testing.T) {
 	t.Parallel()
 	f := commons.BrowseFilter{
-		Priority: -1,
+		Priority: commons.PriorityUnset,
 		Limit:    50,
 	}
 	got := commons.BuildBrowseQuery(f)
@@ -220,7 +220,7 @@ func TestBuildBrowseQuery_EscapesSQL(t *testing.T) {
 	t.Parallel()
 	f := commons.BrowseFilter{
 		Status:   "it's",
-		Priority: -1,
+		Priority: commons.PriorityUnset,
 		Limit:    50,
 	}
 	got := commons.BuildBrowseQuery(f)

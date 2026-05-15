@@ -11,9 +11,9 @@ import (
 
 // MutationResult holds the outcome of a mutation operation.
 type MutationResult struct {
-	Detail *DetailResult
-	Branch string // mutation branch name (PR mode) or ""
-	Hint   string // user-facing hint ("" if none)
+	Detail *DetailResult `json:"detail,omitempty"`
+	Branch string        `json:"branch,omitempty"` // mutation branch name (PR mode) or ""
+	Hint   string        `json:"hint,omitempty"`   // user-facing hint ("" if none)
 }
 
 // mutate is the internal mode-aware mutation helper.
